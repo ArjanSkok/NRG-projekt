@@ -1,0 +1,9 @@
+laspy[lazrs]
+open3d
+matplotlib
+pillow
+numpy
+scipy
+segment-anything @ git+https://github.com/facebookresearch/segment-anything.git
+torch
+torchvision
