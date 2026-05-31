@@ -2,8 +2,8 @@ import open3d
 import numpy as np
 import laspy
 import sam2_segment
-import sam_segment
 
+# Select the region from /data
 filename = "./data/vojkovo.laz"
 crop_size = 150
 
