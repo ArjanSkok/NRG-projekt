@@ -5,7 +5,7 @@ This project performs interactive object segmentation on aerial LiDAR point clou
 Required files:
 - main.py
 - sam2_segment.py
-- camera_ablation.py
+- ablation.py
 - requirements.txt
 - data/ folder with .laz files
 
@@ -70,7 +70,7 @@ Running:
 
 Ablation:
 To run ablation experiments:
-   python camera_ablation.py
+   python ablation.py
 
 This generates:
 - ablation_views.png

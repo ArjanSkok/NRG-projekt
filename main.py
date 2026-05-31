@@ -28,7 +28,6 @@ def load_crop():
     cy = (y.min() + y.max()) / 2
 
     crop_mask = ((x > cx - crop_size/2) & (x < cx + crop_size/2) & (y > cy - crop_size/2) & (y < cy + crop_size/2) & (~np.isin(cls, [7, 12])))
-
     xyz_crop = np.vstack([x, y, z]).T[crop_mask]
     cls_crop = cls[crop_mask]
 
