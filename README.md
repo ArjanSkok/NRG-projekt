@@ -90,5 +90,3 @@ python ablation.py
 This generates:
 - `ablation_views.png` — effect of number of views on segmentation quality
 - `ablation_threshold.png` — effect of voting threshold on precision/recall/F1
-
-## Project Structure
