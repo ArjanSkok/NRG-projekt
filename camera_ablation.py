@@ -19,11 +19,7 @@ cls = np.array(las.classification)
 cx = (x.min() + x.max()) / 2
 cy = (y.min() + y.max()) / 2
 
-crop_mask = (
-    (x > cx - crop_size/2) & (x < cx + crop_size/2) &
-    (y > cy - crop_size/2) & (y < cy + crop_size/2) &
-    (~np.isin(cls, [7, 12]))
-)
+crop_mask = ((x > cx - crop_size/2) & (x < cx + crop_size/2) & (y > cy - crop_size/2) & (y < cy + crop_size/2) & (~np.isin(cls, [7, 12])))
 
 xyz_crop = np.vstack([x, y, z]).T[crop_mask]
 cls_crop = cls[crop_mask]
@@ -53,9 +49,7 @@ for n_views in [0, 2, 4, 8, 16]:
     R_top = seg.rotation_matrix(top_cam, np.zeros(3))
     top_prompt_pixel = seg.project_single_point(chosen_3d, top_cam, R_top)
 
-    masks, _ = seg.segment_pics(predictor, cameras, xyz_norm,
-                                 top_prompt_point=np.array([top_prompt_pixel]))
-
+    masks, _ = seg.segment_pics(predictor, cameras, xyz_norm, top_prompt_point=np.array([top_prompt_pixel]))
     votes, accepted, segmented_pts = seg.voting(cameras, xyz_norm)
     target_centroid = xyz_norm[accepted].mean(axis=0)
     majority_class, precision, recall, f1 = seg.evaluate(accepted, cls_crop, xyz_norm, target_centroid, radius=15)
@@ -65,7 +59,7 @@ for n_views in [0, 2, 4, 8, 16]:
 
     results.append({"n_views": n_views, "precision": precision, "recall": recall, "f1": f1, "points": accepted.sum()})
 
-print("\n=== ABLATION RESULTS ===")
+print("\nABLATION RESULTS")
 print(f"{'Views':>6} {'Precision':>10} {'Points':>8}")
 for r in results:
     print(f"{r['n_views']:>6} {r['precision']:>10.3f} {r['points']:>8}")
@@ -99,13 +93,14 @@ plt.tight_layout()
 plt.savefig("ablation_views.png", dpi=150)
 plt.show()
 
+
 print("\nTHRESHOLD ABLATION (n_views=8 side + top)")
 results_thresh = []
-
 cameras = cameras_8
 
 for thresh in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
     votes, accepted, segmented_pts = seg.voting(cameras, xyz_norm, prob_threshold=thresh)
+    
     if accepted.sum() == 0:
         print(f"  threshold={thresh:.1f}: no points selected")
         results_thresh.append({"threshold": thresh, "precision": 0.0, "recall": 0.0, "f1": 0.0, "points": 0})
@@ -116,7 +111,6 @@ for thresh in [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]:
     majority_class, precision, recall, f1 = seg.evaluate(accepted, cls_crop, xyz_norm, target_centroid, radius=15)
 
     results_thresh.append({"threshold": thresh, "precision": precision, "recall": recall, "f1": f1, "points": accepted.sum()})
-
     print(f"threshold={thresh:.1f}: " f"precision={precision:.3f}, "f"recall={recall:.3f}, "f"f1={f1:.3f}, "f"points={accepted.sum()}")
 
 
