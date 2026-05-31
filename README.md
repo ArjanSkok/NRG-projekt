@@ -1,4 +1,4 @@
-Object Segmentation from Multi-View LiDAR Renderings
+\# Object Segmentation from Multi-View LiDAR Renderings
 
 
 
@@ -18,17 +18,11 @@ The user selects one point on a target object in a 3D point cloud. The system th
 
 
 
-Place a `.laz` file in the `data/` folder. There are already some example data there, that was used for development.
+Place a `.laz` file in the `data/` folder. There are already some example data files there that were used during development.
 
 
 
-Example:
-
-
-
-```text
-
-data/skocjan.laz
+Example: `data/skocjan.laz`
 
 
 
