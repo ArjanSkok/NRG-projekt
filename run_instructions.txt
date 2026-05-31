@@ -1,0 +1,77 @@
+Object Segmentation from Multi-View LiDAR Renderings
+
+This project performs interactive object segmentation on aerial LiDAR point clouds using SAM2.
+
+Required files:
+- main.py
+- sam2_segment.py
+- camera_ablation.py
+- requirements.txt
+- data/ folder with .laz files
+
+Setup:
+
+1. Create a virtual environment:
+
+   python -m venv .venv
+
+2. Activate the virtual environment:
+
+   Windows PowerShell:
+   .\.venv\Scripts\Activate.ps1
+
+   Windows CMD:
+   .\.venv\Scripts\activate.bat
+
+   Linux / macOS:
+   source .venv/bin/activate
+
+3. Install dependencies:
+
+   pip install -r requirements.txt
+
+
+4. Install SAM2 separately:
+
+   git clone https://github.com/facebookresearch/sam2.git
+   cd sam2
+   pip install -e .
+
+
+5. Download a SAM2 checkpoint from the official SAM2 repository.
+
+6. In sam2_segment.py, set:
+   SAM2_CHECKPOINT = path to downloaded checkpoint
+   SAM2_CONFIG = config path for the selected SAM2 model
+ 
+7. Place a .laz file into the data/ folder. There are already some datasets there, that were used for development and testing.
+
+8. In sam2_segment.py, set:
+   filename_base = "./data/your_file.laz"
+
+
+Running:
+1. Run:
+   python main.py
+
+2. A 3D point cloud window opens.
+
+3. Select the target object:
+   Shift + Left Click  = pick point
+   Q or Esc            = confirm and close window
+
+4. The program then automatically:
+   - renders the point cloud from multiple 2D views
+   - segments the views with SAM2
+   - projects masks back into 3D
+   - fuses the results with voting
+   - opens the final 3D segmentation result
+
+
+Ablation:
+To run ablation experiments:
+   python camera_ablation.py
+
+This generates:
+- ablation_views.png
+- ablation_threshold.png
