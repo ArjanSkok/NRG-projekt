@@ -31,7 +31,8 @@ mean = xyz_crop.mean(axis=0)
 xyz_norm = xyz_crop - mean
 centroid = xyz_norm.mean(axis=0)
 
-chosen_3d = np.load("chosen_point.npy")
+#chosen_3d = np.load("chosen_point.npy")
+chosen_3d = [53, -35, 2.1]
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 sam2_model = build_sam2(seg.SAM2_CONFIG, seg.SAM2_CHECKPOINT, device=device)
