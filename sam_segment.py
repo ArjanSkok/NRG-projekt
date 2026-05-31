@@ -8,12 +8,12 @@ import os
 from scipy.ndimage import maximum_filter
 
 filename = "GK_401_45.laz"
-crop_size = 200
+crop_size = 150
 
 def get_cameras(centroid, xyz_norm):
     scene_size = np.max([xyz_norm[:, 0].max() - xyz_norm[:, 0].min(), xyz_norm[:, 1].max() - xyz_norm[:, 1].min()]) / 2
     camera_r = scene_size * 1.8
-    camera_h  = scene_size * 0.6
+    camera_h  = scene_size * 1.2
 
     cameras = []
     for i in range(8):
@@ -77,10 +77,15 @@ def render_heightmap(xyz, camera_position, R, img_w=1024, img_h=1024, fx=800, po
 
     if point_radius > 0:
         img_gray = maximum_filter(img_gray, size=2 * point_radius + 1)
+        #img_gray = maximum_filter(img_gray, size=2 * point_radius + 1)
+
+    # img_colored = plt.cm.jet(img_gray.astype(np.float32) / 255.0)[:, :, :3]
+    # img_colored[img_gray == 0] = 0
+    # img_out = (img_colored * 255).astype(np.uint8)
+
+    # return img_out, point_index_image
 
     return np.stack([img_gray]*3, axis=-1), point_index_image
-
-    return img, point_index_image
 
 def render_views(xyz_norm, centroid, cameras):
     print("Saving 2d renders")
@@ -150,8 +155,30 @@ def segment_pics(predictor, cameras, xyz_norm, top_prompt_point=np.array([[512, 
 
     return final_masks, building_centroid_3d
 
-def voting(cameras, xyz_norm, threshold=5):
-    votes = np.zeros(len(xyz_norm), dtype=np.int32)
+# def voting(cameras, xyz_norm, threshold=5):
+#     votes = np.zeros(len(xyz_norm), dtype=np.int32)
+
+#     for name, _ in cameras:
+#         mask_path = f"masks/{name}_mask.npy"
+#         idx_path = f"renders/{name}_indices.npy"
+
+#         if not os.path.exists(mask_path):
+#             continue
+
+#         mask = np.load(mask_path)
+#         point_index_image = np.load(idx_path)
+#         selected = point_index_image[mask]
+#         selected = selected[selected >= 0]
+#         votes[selected] += 1
+
+#     accepted = votes >= threshold
+#     segmented_pts = xyz_norm[accepted]
+#     return votes, accepted, segmented_pts
+
+
+def voting(cameras, xyz_norm, prob_threshold=0.6, max_distance=None):
+    object_score = np.zeros(len(xyz_norm), dtype=np.float32)
+    total_score = np.zeros(len(xyz_norm), dtype=np.float32)
 
     for name, _ in cameras:
         mask_path = f"masks/{name}_mask.npy"
@@ -162,15 +189,29 @@ def voting(cameras, xyz_norm, threshold=5):
 
         mask = np.load(mask_path)
         point_index_image = np.load(idx_path)
+
+        visible = point_index_image >= 0
+        visible_indices = point_index_image[visible]
+
+        total_score[visible_indices] += 1.0
+
         selected = point_index_image[mask]
         selected = selected[selected >= 0]
-        votes[selected] += 1
+        object_score[selected] += 1.0
 
-    accepted = votes >= threshold
+    object_prob = object_score / np.maximum(total_score, 1e-6)
+    accepted = object_prob >= prob_threshold
+
+    # if max_distance is not None and accepted.sum() > 0:
+    #     cluster_centroid = xyz_norm[accepted].mean(axis=0)
+    #     dists = np.linalg.norm(xyz_norm - cluster_centroid, axis=1)
+    #     accepted &= dists < max_distance
+
     segmented_pts = xyz_norm[accepted]
-    return votes, accepted, segmented_pts
 
-def eval(mask, cls_crop):
+    return object_prob, accepted, segmented_pts
+
+def evaluate(mask, cls_crop):
     segmented_cls = cls_crop[mask]
     class_names = {1:'unclassified', 2:'ground', 3:'low veg', 4:'med veg', 5:'high veg', 6:'building', 9:'water'}
     unique, counts = np.unique(segmented_cls, return_counts=True)
@@ -188,7 +229,7 @@ def eval(mask, cls_crop):
 
     print()
     print(f"Majority class: {majority_class} ({class_names.get(majority_class, '?')})")
-    print(f"Precision: {precision:.3f}%")
+    print(f"Precision: {precision:.3f}")
 
     return majority_class, precision
 
@@ -205,7 +246,7 @@ def visualize_masks(cameras, masks):
         ax.set_title(name)
         ax.axis("off")
     plt.tight_layout()
-    plt.savefig("all_masks.png", dpi=150)
+    plt.savefig("./viz/all_masks.png", dpi=150)
 
 def visualize_3d(xyz_norm, segmented_mask_3d, segmented_pts):
     import open3d as o3d
@@ -214,14 +255,14 @@ def visualize_3d(xyz_norm, segmented_mask_3d, segmented_pts):
     pcd = o3d.geometry.PointCloud()
     pcd.points = o3d.utility.Vector3dVector(xyz_norm)
     pcd.colors = o3d.utility.Vector3dVector(colors)
-    o3d.io.write_point_cloud("segmented_result.ply", pcd)
+    o3d.io.write_point_cloud("./viz/segmented_result.ply", pcd)
 
     fig, ax = plt.subplots(figsize=(8, 8))
     ax.scatter(xyz_norm[~segmented_mask_3d, 0], xyz_norm[~segmented_mask_3d, 1], c='lightgrey', s=0.1)
     ax.scatter(segmented_pts[:, 0], segmented_pts[:, 1], c='red', s=2.0)
     ax.set_title(f"3D segmentation result (top-down)\n{len(segmented_pts)} points")
     ax.set_aspect('equal')
-    plt.savefig("segmentation_topdown.png", dpi=150)
+    plt.savefig("./viz/segmentation_topdown.png", dpi=150)
 
 def main(chosen_3d=None):
     os.makedirs("renders", exist_ok=True)
@@ -234,11 +275,7 @@ def main(chosen_3d=None):
     cx = (x.min() + x.max()) / 2
     cy = (y.min() + y.max()) / 2
 
-    crop_mask = (
-        (x > cx - crop_size/2) & (x < cx + crop_size/2) &
-        (y > cy - crop_size/2) & (y < cy + crop_size/2) &
-        (~np.isin(cls, [7, 12]))
-    )
+    crop_mask = ((x > cx - crop_size/2) & (x < cx + crop_size/2) & (y > cy - crop_size/2) & (y < cy + crop_size/2) & (~np.isin(cls, [7, 12])))
 
     xyz_crop = np.vstack([x, y, z]).T[crop_mask]
     cls_crop = cls[crop_mask]
@@ -270,8 +307,8 @@ def main(chosen_3d=None):
     masks, building_centroid_3d = segment_pics(predictor, cameras, xyz_norm, top_prompt_point=np.array([top_prompt_pixel]))
     visualize_masks(cameras, masks)
 
-    votes, accepted, segmented_pts = voting(cameras, xyz_norm)
-    eval(accepted, cls_crop)
+    votes, accepted, segmented_pts = voting(cameras, xyz_norm, max_distance=20)
+    evaluate(accepted, cls_crop)
     visualize_3d(xyz_norm, accepted, segmented_pts)
 
     return xyz_norm, cls_crop, accepted, segmented_pts
