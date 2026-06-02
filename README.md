@@ -43,7 +43,6 @@ pip install -r requirements.txt
 git clone https://github.com/facebookresearch/sam2.git
 cd sam2
 pip install -e .
-cd ..
 ```
 
 ### 5. Download a SAM2 checkpoint
