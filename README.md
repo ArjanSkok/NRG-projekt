@@ -11,8 +11,8 @@ Interactive object segmentation on aerial LiDAR point clouds using SAM2. The sys
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/yourrepo.git
-cd yourrepo
+git clone https://github.com/ArjanSkok/NRG-projekt
+cd NRG-projekt
 ```
 
 ### 2. Create and activate a virtual environment
